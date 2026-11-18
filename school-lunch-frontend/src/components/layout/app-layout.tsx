@@ -1,6 +1,8 @@
+
 'use client';
 
 import * as React from 'react';
+import { usePathname } from 'next/navigation';
 import { Sidebar } from './sidebar';
 import { TopBar } from './top-bar';
 import { DemoDataBanner } from '@/mocks/demo-badge';
@@ -11,8 +13,18 @@ export interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const pathname = usePathname();
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] =
+    React.useState(false);
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] =
+    React.useState(false);
+
+  // Skip the application layout on the home and onboarding pages
+  if (pathname === '/' || pathname.startsWith('/onboarding')) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50/70 text-slate-900 font-sans antialiased selection:bg-emerald-100 selection:text-emerald-900">

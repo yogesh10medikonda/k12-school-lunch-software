@@ -1,149 +1,107 @@
-'use client';
-
-import * as React from 'react';
+import Link from 'next/link';
 import {
-  Users,
-  UtensilsCrossed,
-  PackageOpen,
-  AlertTriangle,
-  Receipt,
-  Apple,
-  Trash2,
-  Calendar,
-  Sparkles,
+  ArrowRight, BarChart3, CalendarDays, HeartPulse, Package, Trash2, Truck, Users,
 } from 'lucide-react';
-import { SummaryCard } from '@/components/shared/summary-card';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useRole } from '@/lib/auth/roles';
+import { MarketingShell } from '@/components/marketing/marketing-shell';
 
-export default function DashboardPage() {
-  const { currentUser, activeRole } = useRole();
+export const metadata = {
+  title: 'NutriKitchen OS | K-12 School Lunch Nutrition & Inventory Management',
+  description: 'Plan menus, check nutrition, control inventory and track food waste in one place.',
+};
 
+const FEATURES = [
+  { icon: Users, title: 'Students and dietary safeguards', text: 'Keep rosters with allergy and dietary information in one record.' },
+  { icon: CalendarDays, title: 'Menu planning', text: 'Plan daily or weekly menus and see the ingredients each one needs.' },
+  { icon: HeartPulse, title: 'Nutrition analysis', text: 'Compare planned meals against guidelines that your school configures.' },
+  { icon: Package, title: 'Inventory control', text: 'Track stock movements, with low-stock and expiry alerts.' },
+  { icon: Truck, title: 'Vendors and purchase orders', text: 'Keep supplier prices together and order what is missing.' },
+  { icon: Trash2, title: 'Food waste tracking', text: 'Record what was prepared, served and wasted, then spot patterns.' },
+  { icon: BarChart3, title: 'Reports', text: 'See a summary of operations across the whole lunch program.' },
+];
+
+const STEPS = [
+  'Set up your school and student groups',
+  'Plan menus and check their nutrition',
+  'Compare ingredient needs with your stock',
+  'Order what is missing and track waste',
+];
+
+const FAQS = [
+  { q: 'Who is it for?', a: 'School administrators, nutritionists, kitchen staff and inventory managers.' },
+  { q: 'Can I set my own nutrition guidelines?', a: 'Yes. Guidelines are configurable by jurisdiction and grade group. No limits are fixed in advance.' },
+  { q: 'Is student data protected?', a: 'Allergy and dietary data is treated as sensitive. Login and role-based access are planned for the next release, so please use test data for now.' },
+];
+
+export default function LandingPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 p-6 text-white shadow-md">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              Operations Center
-            </span>
-            <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-300">
-              Live School Day
-            </span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-            Welcome back, {currentUser.name}
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-300">
-            {currentUser.schoolName} &mdash; Active preview role:{' '}
-            <span className="font-semibold text-emerald-300">{activeRole}</span>
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs font-medium backdrop-blur-sm">
-            <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-            <span>
-              Today:{' '}
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-        <SummaryCard
-          title="Total Students"
-          value="1,420"
-          subtitle="Enrolled"
-          icon={Users}
-          href="/students"
-          variant="navy"
-          trend={{ value: '+12 this term', direction: 'up' }}
-        />
-        <SummaryCard
-          title="Meals Planned"
-          value="850"
-          subtitle="Lunch + Bfast"
-          icon={UtensilsCrossed}
-          href="/menus"
-          variant="default"
-          trend={{ value: '200 Hot Lunch', direction: 'neutral' }}
-        />
-        <SummaryCard
-          title="Available Stock"
-          value="142"
-          subtitle="Ingredients"
-          icon={PackageOpen}
-          href="/inventory"
-          variant="success"
-        />
-        <SummaryCard
-          title="Low Stock"
-          value="3"
-          subtitle="Need reorder"
-          icon={AlertTriangle}
-          href="/inventory"
-          variant="warning"
-        />
-        <SummaryCard
-          title="Pending POs"
-          value="2"
-          subtitle="Awaiting Delivery"
-          icon={Receipt}
-          href="/purchase-orders"
-          variant="default"
-        />
-        <SummaryCard
-          title="Nutrition"
-          value="98.2%"
-          subtitle="USDA / State Compliant"
-          icon={Apple}
-          href="/nutrition"
-          variant="success"
-          trend={{ value: 'Optimal', direction: 'up' }}
-        />
-        <SummaryCard
-          title="Waste Rate"
-          value="4.8%"
-          subtitle="Prepared vs Wasted"
-          icon={Trash2}
-          href="/food-waste"
-          variant="warning"
-          trend={{ value: '-1.2% this wk', direction: 'down' }}
-        />
-      </div>
-
-      <Card className="border-emerald-200/60 bg-emerald-50/30">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-emerald-700" />
-              <CardTitle className="text-base text-emerald-950">
-                Phase 1 Shell &amp; Foundation Ready
-              </CardTitle>
+    <MarketingShell>
+      <main>
+        <section className="bg-gradient-to-b from-emerald-50 to-white">
+          <div className="mx-auto max-w-4xl px-4 py-20 text-center">
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+              One place to run your school lunch program
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-600">
+              Plan menus, check nutrition, control inventory and track food waste,
+              all connected in one system.
+            </p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link href="/onboarding" className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-6 py-3 font-semibold text-white hover:bg-emerald-900">
+                Get started <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <a href="#how-it-works" className="rounded-lg border border-slate-300 px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50">
+                See how it works
+              </a>
             </div>
-            <Badge variant="success">Phase 1 Complete</Badge>
           </div>
-          <CardDescription className="text-emerald-900/80">
-            The core architecture, design system, API client, role permissions switcher, central
-            unit conversions, and shared components are active.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-xs text-emerald-950/90 space-y-2">
-          <p>
-            You can test the collapsible sidebar, top navigation, search, notifications popover, and
-            the active role switcher in the header to preview permissions across Administrator,
-            Nutritionist, Inventory Manager, and Kitchen Staff.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-4 py-16">
+          <h2 className="text-center text-2xl font-bold">Everything your lunch program needs</h2>
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map(({ icon: Icon, title, text }) => (
+              <div key={title} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+                <Icon className="h-6 w-6 text-emerald-700" aria-hidden="true" />
+                <h3 className="mt-3 font-semibold">{title}</h3>
+                <p className="mt-1 text-sm text-slate-600">{text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="how-it-works" className="bg-slate-50">
+          <div className="mx-auto max-w-4xl px-4 py-16">
+            <h2 className="text-center text-2xl font-bold">How it works</h2>
+            <ol className="mt-8 space-y-4">
+              {STEPS.map((step, i) => (
+                <li key={step} className="flex items-center gap-4 rounded-xl bg-white p-4 shadow-sm">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-800 text-sm font-bold text-white">
+                    {i + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-3xl px-4 py-16">
+          <h2 className="text-center text-2xl font-bold">Questions</h2>
+          <div className="mt-8 space-y-3">
+            {FAQS.map(({ q, a }) => (
+              <details key={q} className="rounded-xl border border-slate-200 p-4">
+                <summary className="cursor-pointer font-semibold">{q}</summary>
+                <p className="mt-2 text-sm text-slate-600">{a}</p>
+              </details>
+            ))}
+          </div>
+          <div className="mt-12 text-center">
+            <Link href="/onboarding" className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-6 py-3 font-semibold text-white hover:bg-emerald-900">
+              Set up your school <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </section>
+      </main>
+    </MarketingShell>
   );
 }
