@@ -1,71 +1,39 @@
 import mongoose from 'mongoose';
 
-/**
- * Menu — daily meal plan with items and ingredient requirements.
- */
+export const INGREDIENT_MODEL = 'Ingredient';
+export const FOOD_ITEM_MODEL = 'FoodItem';
+export const MEAL_TYPES = ['Breakfast', 'Lunch', 'Snack'];
+export const MENU_STATUSES = ['Draft', 'Published', 'Completed'];
+
+const ingredientLineSchema = new mongoose.Schema(
+  {
+    ingredient: { type: mongoose.Schema.Types.ObjectId, ref: INGREDIENT_MODEL, required: true },
+    quantityPerServing: { type: Number, required: true, min: 0.0001 },
+    unit: { type: String, required: true, trim: true, maxlength: 20 },
+  },
+  { _id: false }
+);
+
+const menuItemSchema = new mongoose.Schema(
+  {
+    foodItem: { type: mongoose.Schema.Types.ObjectId, ref: FOOD_ITEM_MODEL, required: true },
+    servingSize: { type: Number, required: true, min: 0.0001 },
+    ingredients: { type: [ingredientLineSchema], default: [] },
+  },
+  { _id: false }
+);
+
 const menuSchema = new mongoose.Schema(
   {
-    date: {
-      type: Date,
-      required: [true, 'Date is required'],
-      index: true,
-    },
-    mealType: {
-      type: String,
-      required: [true, 'Meal type is required'],
-      trim: true,
-      index: true,
-    },
-    expectedServings: {
-      type: Number,
-      required: [true, 'Expected servings is required'],
-      min: [1, 'Expected servings must be at least 1'],
-    },
-    status: {
-      type: String,
-      enum: ['Draft', 'Published', 'Completed'],
-      default: 'Draft',
-      index: true,
-    },
-    items: [
-      {
-        foodItem: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'FoodItem',
-          required: [true, 'Food item is required'],
-        },
-        servingSize: {
-          type: Number,
-          required: [true, 'Serving size is required'],
-          min: [0.01, 'Serving size must be positive'],
-        },
-        ingredients: [
-          {
-            ingredient: {
-              type: mongoose.Schema.Types.ObjectId,
-              ref: 'Ingredient',
-              required: [true, 'Ingredient is required'],
-            },
-            quantityPerServing: {
-              type: Number,
-              required: [true, 'Quantity per serving is required'],
-              min: [0.01, 'Quantity per serving must be positive'],
-            },
-            unit: {
-              type: String,
-              required: [true, 'Unit is required'],
-              trim: true,
-            },
-          },
-        ],
-      },
-    ],
+    date: { type: Date, required: true },
+    mealType: { type: String, required: true, enum: MEAL_TYPES },
+    expectedServings: { type: Number, required: true, min: 1 },
+    status: { type: String, enum: MENU_STATUSES, default: 'Draft' },
+    items: { type: [menuItemSchema], default: [] },
   },
   { timestamps: true }
 );
 
 menuSchema.index({ date: 1, mealType: 1 });
-menuSchema.index({ status: 1 });
 
-export const Menu = mongoose.model('Menu', menuSchema);
-export default Menu;
+export default mongoose.model('Menu', menuSchema);

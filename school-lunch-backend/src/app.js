@@ -24,7 +24,7 @@ const app = express();
 // Trust the Render proxy
 app.set('trust proxy', 1);
 
-// Security & base middleware
+// Security middleware
 app.use(helmet());
 
 // CORS
