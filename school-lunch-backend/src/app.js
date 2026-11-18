@@ -12,13 +12,24 @@ import { notFound } from './middleware/notFound.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import studentRoutes from './modules/students/student.routes.js';
 import vendorRoutes from './modules/vendors/vendor.routes.js';
+import inventoryRoutes from './modules/inventory/inventory.routes.js';
+
 const app = express();
 
 // Security & base middleware
 app.use(helmet());
+
 // CORS only for the frontend origin — never "*"
 app.use(cors({ origin: env.FRONTEND_ORIGIN }));
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    skip: () => process.env.NODE_ENV === 'test',
+  })
+);
+
 app.use(express.json());
 app.use(sanitize);
 app.use(morgan('dev'));
@@ -31,6 +42,7 @@ app.get('/api/health', (_req, res) => {
 // Routes
 app.use('/api/students', authenticate, studentRoutes);
 app.use('/api/vendors', authenticate, vendorRoutes);
+app.use('/api/inventory', authenticate, inventoryRoutes);
 
 // 404
 app.use(notFound);
