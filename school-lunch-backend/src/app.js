@@ -14,6 +14,7 @@ import studentRoutes from './modules/students/student.routes.js';
 import vendorRoutes from './modules/vendors/vendor.routes.js';
 import inventoryRoutes from './modules/inventory/inventory.routes.js';
 import nutritionRoutes from './modules/nutrition/nutrition.routes.js';
+import menuRoutes from './modules/menus/menu.routes.js';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/students', authenticate, studentRoutes);
 app.use('/api/vendors', authenticate, vendorRoutes);
 app.use('/api/inventory', authenticate, inventoryRoutes);
 app.use('/api/nutrition', authenticate, nutritionRoutes);
+app.use('/api/menus', authenticate, menuRoutes);
 
 // 404
 app.use(notFound);
