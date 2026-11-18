@@ -13,6 +13,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import studentRoutes from './modules/students/student.routes.js';
 import vendorRoutes from './modules/vendors/vendor.routes.js';
 import inventoryRoutes from './modules/inventory/inventory.routes.js';
+import nutritionRoutes from './modules/nutrition/nutrition.routes.js';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api/students', authenticate, studentRoutes);
 app.use('/api/vendors', authenticate, vendorRoutes);
 app.use('/api/inventory', authenticate, inventoryRoutes);
+app.use('/api/nutrition', authenticate, nutritionRoutes);
 
 // 404
 app.use(notFound);
