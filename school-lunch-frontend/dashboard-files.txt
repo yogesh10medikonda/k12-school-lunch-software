@@ -1,0 +1,10 @@
+﻿=== C:\PROJECTS\K12-School-Lunch-Software\school-lunch-frontend\src\features\dashboard\api\index.ts
+// dashboard API service — import apiClient from '@/lib/api-client' and add fetch functions here
+=== C:\PROJECTS\K12-School-Lunch-Software\school-lunch-frontend\src\features\dashboard\components\index.ts
+// dashboard React components — feature-specific UI lives here
+=== C:\PROJECTS\K12-School-Lunch-Software\school-lunch-frontend\src\features\dashboard\hooks\index.ts
+// dashboard custom hooks — TanStack Query hooks go here
+=== C:\PROJECTS\K12-School-Lunch-Software\school-lunch-frontend\src\features\dashboard\schemas\index.ts
+// dashboard Zod schemas — validation for forms and API payloads
+=== C:\PROJECTS\K12-School-Lunch-Software\school-lunch-frontend\src\features\dashboard\types\index.ts
+// dashboard domain types — add shared interfaces here as the module is built out

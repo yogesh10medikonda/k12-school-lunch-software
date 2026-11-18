@@ -1,0 +1,503 @@
+﻿=== tests\menus.test.js
+import 'dotenv/config';
+import mongoose from 'mongoose';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import request from 'supertest';
+import app from '../src/app.js';
+
+let mongod;
+
+beforeAll(async () => {
+  mongod = await MongoMemoryServer.create();
+  await mongoose.connect(mongod.getUri());
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  if (mongod) await mongod.stop();
+});
+
+beforeEach(async () => {
+  await mongoose.connection.dropDatabase();
+});
+
+const baseMenu = {
+  date: '2025-01-15',
+  mealType: 'lunch',
+  expectedServings: 100,
+  status: 'Draft',
+  items: [
+    {
+      foodItem: new mongoose.Types.ObjectId().toHexString(),
+      servingSize: 150,
+      ingredients: [
+        {
+          ingredient: new mongoose.Types.ObjectId().toHexString(),
+          quantityPerServing: 50,
+          unit: 'g',
+        },
+      ],
+    },
+  ],
+};
+
+describe('POST /api/menus', () => {
+  it('creates a menu and returns 201 with the standard envelope', async () => {
+    const res = await request(app).post('/api/menus').send(baseMenu);
+    expect(res.statusCode).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.date).toBe('2025-01-15T00:00:00.000Z');
+    expect(res.body.data.mealType).toBe('lunch');
+    expect(res.body.data.expectedServings).toBe(100);
+    expect(res.body.data._id).toBeDefined();
+    expect(res.body.message).toBe('Menu created successfully');
+  });
+
+  it('returns 400 for missing required fields', async () => {
+    const res = await request(app)
+      .post('/api/menus')
+      .send({ date: '2025-01-15' });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.errors).toBeDefined();
+  });
+
+  it('returns 400 for expectedServings less than 1', async () => {
+    const res = await request(app)
+      .post('/api/menus')
+      .send({ ...baseMenu, expectedServings: 0 });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 409 for duplicate date and mealType', async () => {
+    await request(app).post('/api/menus').send(baseMenu);
+    const res = await request(app).post('/api/menus').send(baseMenu);
+    expect(res.statusCode).toBe(409);
+    expect(res.body.success).toBe(false);
+  });
+});
+
+describe('GET /api/menus', () => {
+  beforeEach(async () => {
+    await request(app).post('/api/menus').send(baseMenu);
+    await request(app).post('/api/menus').send({
+      ...baseMenu,
+      date: '2025-01-16',
+      mealType: 'breakfast',
+      status: 'Published',
+    });
+  });
+
+  it('returns a paginated list', async () => {
+    const res = await request(app).get('/api/menus?page=1&limit=5');
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBe(2);
+    expect(res.body.meta).toMatchObject({
+      page: 1,
+      limit: 5,
+      total: 2,
+      totalPages: 1,
+    });
+  });
+
+  it('filters by mealType', async () => {
+    const res = await request(app).get('/api/menus?mealType=lunch');
+    expect(res.body.data.length).toBe(1);
+    expect(res.body.data[0].mealType).toBe('lunch');
+  });
+
+  it('filters by status', async () => {
+    const res = await request(app).get('/api/menus?status=Published');
+    expect(res.body.data.length).toBe(1);
+    expect(res.body.data[0].status).toBe('Published');
+  });
+
+  it('filters by date range', async () => {
+    const res = await request(app).get('/api/menus?dateFrom=2025-01-15&dateTo=2025-01-15');
+    expect(res.body.data.length).toBe(1);
+    expect(res.body.data[0].date).toBe('2025-01-15T00:00:00.000Z');
+  });
+
+  it('sorts by date descending by default', async () => {
+    const res = await request(app).get('/api/menus');
+    expect(res.body.data[0].date).toBe('2025-01-16T00:00:00.000Z');
+  });
+});
+
+describe('GET /api/menus/:id', () => {
+  let menuId;
+
+  beforeEach(async () => {
+    const res = await request(app).post('/api/menus').send(baseMenu);
+    menuId = res.body.data._id;
+  });
+
+  it('returns the full record', async () => {
+    const res = await request(app).get(`/api/menus/${menuId}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.mealType).toBe('lunch');
+    expect(res.body.data.items).toBeDefined();
+    expect(res.body.data.items.length).toBe(1);
+  });
+
+  it('returns 404 for a missing record', async () => {
+    const res = await request(app).get(
+      `/api/menus/${new mongoose.Types.ObjectId().toHexString()}`
+    );
+    expect(res.statusCode).toBe(404);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 400 for an invalid ObjectId', async () => {
+    const res = await request(app).get('/api/menus/not-an-id');
+    expect(res.statusCode).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+});
+
+describe('PUT /api/menus/:id', () => {
+  let menuId;
+
+  beforeEach(async () => {
+    const res = await request(app).post('/api/menus').send(baseMenu);
+    menuId = res.body.data._id;
+  });
+
+  it('updates a menu and returns 200', async () => {
+    const res = await request(app)
+      .put(`/api/menus/${menuId}`)
+      .send({ expectedServings: 200, status: 'Published' });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.expectedServings).toBe(200);
+    expect(res.body.data.status).toBe('Published');
+  });
+
+  it('returns 409 when changing to an existing date/mealType', async () => {
+    await request(app)
+      .post('/api/menus')
+      .send({ ...baseMenu, date: '2025-01-16', mealType: 'dinner' });
+    const res = await request(app)
+      .put(`/api/menus/${menuId}`)
+      .send({ date: '2025-01-16', mealType: 'dinner' });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('returns 400 for empty update body', async () => {
+    const res = await request(app)
+      .put(`/api/menus/${menuId}`)
+      .send({});
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('allows updating items array', async () => {
+    const newFoodItemId = new mongoose.Types.ObjectId().toHexString();
+    const res = await request(app)
+      .put(`/api/menus/${menuId}`)
+      .send({
+        items: [
+          {
+            foodItem: newFoodItemId,
+            servingSize: 200,
+            ingredients: [],
+          },
+        ],
+      });
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.items.length).toBe(1);
+    expect(res.body.data.items[0].foodItem).toBe(newFoodItemId);
+  });
+});
+
+describe('DELETE /api/menus/:id', () => {
+  let menuId;
+
+  beforeEach(async () => {
+    const res = await request(app).post('/api/menus').send(baseMenu);
+    menuId = res.body.data._id;
+  });
+
+  it('deletes a menu and returns 200', async () => {
+    const res = await request(app).delete(`/api/menus/${menuId}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.success).toBe(true);
+    const check = await request(app).get(`/api/menus/${menuId}`);
+    expect(check.statusCode).toBe(404);
+  });
+
+  it('returns 404 when already deleted', async () => {
+    await request(app).delete(`/api/menus/${menuId}`);
+    const res = await request(app).delete(`/api/menus/${menuId}`);
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('POST /api/menus/:id/duplicate', () => {
+  let menuId;
+
+  beforeEach(async () => {
+    const res = await request(app).post('/api/menus').send(baseMenu);
+    menuId = res.body.data._id;
+  });
+
+  it('duplicates a menu to a new date and returns 201', async () => {
+    const res = await request(app)
+      .post(`/api/menus/${menuId}/duplicate`)
+      .send({ date: '2025-01-20' });
+    expect(res.statusCode).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.date).toBe('2025-01-20T00:00:00.000Z');
+    expect(res.body.data.mealType).toBe('lunch');
+    expect(res.body.data.expectedServings).toBe(100);
+    expect(res.body.data._id).not.toBe(menuId);
+    expect(res.body.message).toBe('Menu duplicated successfully');
+  });
+
+  it('returns 400 for missing date', async () => {
+    const res = await request(app)
+      .post(`/api/menus/${menuId}/duplicate`)
+      .send({});
+    expect(res.statusCode).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 409 if menu already exists for the new date', async () => {
+    await request(app).post('/api/menus').send({
+      ...baseMenu,
+      date: '2025-01-20',
+    });
+    const res = await request(app)
+      .post(`/api/menus/${menuId}/duplicate`)
+      .send({ date: '2025-01-20' });
+    expect(res.statusCode).toBe(409);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 404 for non-existent menu', async () => {
+    const res = await request(app)
+      .post(`/api/menus/${new mongoose.Types.ObjectId().toHexString()}/duplicate`)
+      .send({ date: '2025-01-20' });
+    expect(res.statusCode).toBe(404);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('returns 400 for invalid menu ID', async () => {
+    const res = await request(app)
+      .post('/api/menus/not-an-id/duplicate')
+      .send({ date: '2025-01-20' });
+    expect(res.statusCode).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+});
+=== src\modules\menus\menu.model.js
+import mongoose from 'mongoose';
+
+export const INGREDIENT_MODEL = 'Ingredient';
+export const FOOD_ITEM_MODEL = 'FoodItem';
+export const MEAL_TYPES = ['Breakfast', 'Lunch', 'Snack'];
+export const MENU_STATUSES = ['Draft', 'Published', 'Completed'];
+
+const ingredientLineSchema = new mongoose.Schema(
+  {
+    ingredient: { type: mongoose.Schema.Types.ObjectId, ref: INGREDIENT_MODEL, required: true },
+    quantityPerServing: { type: Number, required: true, min: 0.0001 },
+    unit: { type: String, required: true, trim: true, maxlength: 20 },
+  },
+  { _id: false }
+);
+
+const menuItemSchema = new mongoose.Schema(
+  {
+    foodItem: { type: mongoose.Schema.Types.ObjectId, ref: FOOD_ITEM_MODEL, required: true },
+    servingSize: { type: Number, required: true, min: 0.0001 },
+    ingredients: { type: [ingredientLineSchema], default: [] },
+  },
+  { _id: false }
+);
+
+const menuSchema = new mongoose.Schema(
+  {
+    date: { type: Date, required: true },
+    mealType: { type: String, required: true, enum: MEAL_TYPES },
+    expectedServings: { type: Number, required: true, min: 1 },
+    status: { type: String, enum: MENU_STATUSES, default: 'Draft' },
+    items: { type: [menuItemSchema], default: [] },
+  },
+  { timestamps: true }
+);
+
+menuSchema.index({ date: 1, mealType: 1 });
+
+export default mongoose.model('Menu', menuSchema);
+=== src\modules\menus\menu.validation.js
+import { z } from 'zod';
+import { MEAL_TYPES, MENU_STATUSES } from './menu.model.js';
+
+const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
+
+const ingredientLine = z.object({
+  ingredient: objectId,
+  quantityPerServing: z.number().positive(),
+  unit: z.string().trim().min(1).max(20),
+});
+
+const menuItem = z.object({
+  foodItem: objectId,
+  servingSize: z.number().positive(),
+  ingredients: z.array(ingredientLine).max(50).optional(),
+});
+
+const base = z.object({
+  date: z.coerce.date(),
+  mealType: z.enum(MEAL_TYPES),
+  expectedServings: z.number().int().min(1).max(100000),
+  items: z.array(menuItem).max(30).optional(),
+});
+
+export const idParamSchema = { params: z.object({ id: objectId }) };
+
+export const createMenuSchema = { body: base };
+
+export const updateMenuSchema = {
+  params: z.object({ id: objectId }),
+  body: base
+    .partial()
+    .refine((v) => Object.keys(v).length > 0, 'Provide at least one field to update'),
+};
+
+export const duplicateMenuSchema = {
+  params: z.object({ id: objectId }),
+  body: z.object({ date: z.coerce.date().optional() }).optional(),
+};
+
+export const listMenuQuerySchema = {
+  query: z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(10),
+    dateFrom: z.coerce.date().optional(),
+    dateTo: z.coerce.date().optional(),
+    mealType: z.enum(MEAL_TYPES).optional(),
+    status: z.enum(MENU_STATUSES).optional(),
+  }),
+};
+=== src\modules\menus\menu.controller.js
+import mongoose from 'mongoose';
+import Menu, { INGREDIENT_MODEL, FOOD_ITEM_MODEL } from './menu.model.js';
+
+const httpError = (status, message) => {
+  const err = new Error(message);
+  err.statusCode = status;
+  return err;
+};
+
+async function assertReferencesExist(items = []) {
+  const foodIds = [...new Set(items.map((i) => i.foodItem))];
+  const ingredientIds = [
+    ...new Set(items.flatMap((i) => (i.ingredients ?? []).map((l) => l.ingredient))),
+  ];
+  if (foodIds.length) {
+    const found = await mongoose.model(FOOD_ITEM_MODEL).countDocuments({ _id: { $in: foodIds } });
+    if (found !== foodIds.length) throw httpError(400, 'One or more food items do not exist');
+  }
+  if (ingredientIds.length) {
+    const found = await mongoose
+      .model(INGREDIENT_MODEL)
+      .countDocuments({ _id: { $in: ingredientIds } });
+    if (found !== ingredientIds.length) throw httpError(400, 'One or more ingredients do not exist');
+  }
+}
+
+export const createMenu = async (req, res, next) => {
+  try {
+    await assertReferencesExist(req.body.items);
+    const menu = await Menu.create({ ...req.body, status: 'Draft' });
+    res.status(201).json({ success: true, message: 'Menu created successfully', data: menu });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const listMenus = async (req, res, next) => {
+  try {
+    const q = req.validatedQuery ?? req.query;
+    const filter = {};
+    if (q.mealType) filter.mealType = q.mealType;
+    if (q.status) filter.status = q.status;
+    if (q.dateFrom || q.dateTo) {
+      filter.date = {};
+      if (q.dateFrom) filter.date.$gte = q.dateFrom;
+      if (q.dateTo) filter.date.$lte = q.dateTo;
+    }
+    const [data, total] = await Promise.all([
+      Menu.find(filter)
+        .sort({ date: -1, mealType: 1 })
+        .skip((q.page - 1) * q.limit)
+        .limit(q.limit),
+      Menu.countDocuments(filter),
+    ]);
+    res.json({
+      success: true,
+      message: 'Menus retrieved successfully',
+      data,
+      meta: { page: q.page, limit: q.limit, total, totalPages: Math.ceil(total / q.limit) },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getMenu = async (req, res, next) => {
+  try {
+    const menu = await Menu.findById(req.params.id)
+      .populate('items.foodItem', 'name')
+      .populate('items.ingredients.ingredient', 'name unit');
+    if (!menu) throw httpError(404, 'Menu not found');
+    res.json({ success: true, message: 'Menu retrieved successfully', data: menu });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateMenu = async (req, res, next) => {
+  try {
+    if (req.body.items) await assertReferencesExist(req.body.items);
+    const menu = await Menu.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { returnDocument: 'after', runValidators: true }
+    );
+    if (!menu) throw httpError(404, 'Menu not found');
+    res.json({ success: true, message: 'Menu updated successfully', data: menu });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteMenu = async (req, res, next) => {
+  try {
+    const menu = await Menu.findByIdAndDelete(req.params.id);
+    if (!menu) throw httpError(404, 'Menu not found');
+    res.json({ success: true, message: 'Menu deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const duplicateMenu = async (req, res, next) => {
+  try {
+    const source = await Menu.findById(req.params.id).lean();
+    if (!source) throw httpError(404, 'Menu not found');
+    const copy = await Menu.create({
+      date: req.body?.date ?? source.date,
+      mealType: source.mealType,
+      expectedServings: source.expectedServings,
+      items: source.items,
+      status: 'Draft',
+    });
+    res.status(201).json({ success: true, message: 'Menu duplicated successfully', data: copy });
+  } catch (err) {
+    next(err);
+  }
+};
