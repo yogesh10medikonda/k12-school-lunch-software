@@ -1,10 +1,11 @@
+
 'use client';
 
 import * as React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RoleProvider } from '@/lib/auth/roles';
 import { ToastProvider } from '@/components/ui/toast';
-import { AppLayout } from '@/components/layout/app-layout';
+import { LayoutSwitch } from '@/components/layout/layout-switch';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = React.useState(
@@ -24,7 +25,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <RoleProvider>
         <ToastProvider>
-          <AppLayout>{children}</AppLayout>
+          <LayoutSwitch>{children}</LayoutSwitch>
         </ToastProvider>
       </RoleProvider>
     </QueryClientProvider>
